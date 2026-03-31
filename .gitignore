@@ -8,6 +8,7 @@ dist/
 build/
 .venv/
 venv/
+.kiro/
 terraform/.terraform/
 terraform/*.tfstate*
 terraform/.terraform.lock.hcl
