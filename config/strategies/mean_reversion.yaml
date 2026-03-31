@@ -1,0 +1,22 @@
+strategy:
+  name: mean_reversion
+  description: "Mean reversion strategy for sideways markets"
+  timeframes: ["15m", "1h"]
+  indicators:
+    - name: bollinger_bands
+      period: 20
+      std_dev: 2.0
+    - name: rsi
+      period: 14
+  entry_rules:
+    - condition: "price < lower_band AND rsi < 30"
+      action: buy
+    - condition: "price > upper_band AND rsi > 70"
+      action: sell
+  exit_rules:
+    - condition: "price crosses middle_band"
+      action: close
+  risk:
+    stop_loss_pct: 0.015
+    take_profit_pct: 0.03
+    max_position_size: 0.15

@@ -1,0 +1,24 @@
+agents:
+  technical_analyst:
+    name: "LG Technical Analyst"
+    role: technical_analyst
+    goal: "Run technical analysis state graph for trading signals"
+    backstory: "Deterministic technical analysis pipeline"
+    graph: technical_analyst
+    memory_enabled: true
+
+  sentiment_analyst:
+    name: "LG Sentiment Analyst"
+    role: sentiment_analyst
+    goal: "Run sentiment analysis state graph"
+    backstory: "Deterministic sentiment analysis pipeline"
+    graph: sentiment_analyst
+    memory_enabled: true
+
+  risk_assessor:
+    name: "LG Risk Assessor"
+    role: risk_assessor
+    goal: "Run risk assessment state graph"
+    backstory: "Deterministic risk assessment pipeline"
+    graph: risk_assessor
+    memory_enabled: true

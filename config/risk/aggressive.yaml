@@ -1,0 +1,15 @@
+risk:
+  profile: aggressive
+  max_position_size: 0.35
+  max_portfolio_exposure: 0.90
+  max_daily_loss: 0.10
+  max_leverage: 10
+  stop_loss_pct: 0.05
+  check_interval_seconds: 5
+
+portfolio:
+  total_capital: 100000
+  max_shift_per_rebalance: 0.15
+  rebalance_interval_hours: 12
+  agent_min_allocation: 0.05
+  agent_max_allocation: 0.60

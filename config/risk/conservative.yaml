@@ -1,0 +1,15 @@
+risk:
+  profile: conservative
+  max_position_size: 0.10
+  max_portfolio_exposure: 0.50
+  max_daily_loss: 0.02
+  max_leverage: 1
+  stop_loss_pct: 0.015
+  check_interval_seconds: 10
+
+portfolio:
+  total_capital: 100000
+  max_shift_per_rebalance: 0.05
+  rebalance_interval_hours: 24
+  agent_min_allocation: 0.10
+  agent_max_allocation: 0.40

@@ -1,0 +1,62 @@
+# Default values for crypto-trader
+
+replicaCount: 1
+
+image:
+  repository: us-central1-docker.pkg.dev/project-e4ad9f18-82a4-4e98-ae4/crypto-trader/crypto-trader
+  tag: latest
+  pullPolicy: Always
+
+serviceAccount:
+  name: crypto-trader-sa
+  annotations:
+    iam.gke.io/gcp-service-account: crypto-trader-sa@project-e4ad9f18-82a4-4e98-ae4.iam.gserviceaccount.com
+
+# Deploy 3 trading instances with minimal resources for free tier
+traders:
+  - name: langgraph-baseline
+    mode: langgraph
+    symbol: BTC/USDT
+    interval: "300"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+
+  - name: crewai-openai
+    mode: crewai
+    symbol: BTC/USDT
+    interval: "300"
+    llmProvider: openai
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+
+  - name: crewai-anthropic
+    mode: crewai
+    symbol: BTC/USDT
+    interval: "300"
+    llmProvider: anthropic
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+
+secrets:
+  openaiKey: openai-api-key
+  anthropicKey: anthropic-api-key
+  googleAiKey: google-ai-key
+
+testnet:
+  enabled: "false"
+  regimeThreshold: "0.3"  # Lower = more trades. Default 2.0 for production, 0.3 for testing

@@ -1,0 +1,15 @@
+risk:
+  profile: moderate
+  max_position_size: 0.20
+  max_portfolio_exposure: 0.75
+  max_daily_loss: 0.05
+  max_leverage: 3
+  stop_loss_pct: 0.025
+  check_interval_seconds: 10
+
+portfolio:
+  total_capital: 100000
+  max_shift_per_rebalance: 0.10
+  rebalance_interval_hours: 24
+  agent_min_allocation: 0.05
+  agent_max_allocation: 0.50

@@ -1,0 +1,27 @@
+agents:
+  technical_analyst:
+    name: "Technical Analyst"
+    role: technical_analyst
+    goal: "Analyze market data and identify trading opportunities using technical indicators"
+    backstory: "Expert technical analyst with 15 years of crypto market experience"
+    tools: [market_data_query, indicator_query, memory_query]
+    memory_enabled: true
+    max_iterations: 10
+
+  sentiment_analyst:
+    name: "Sentiment Analyst"
+    role: sentiment_analyst
+    goal: "Analyze news and social sentiment to gauge market mood"
+    backstory: "Specialist in crypto news analysis and social media sentiment tracking"
+    tools: [sentiment_query, memory_query]
+    memory_enabled: true
+    max_iterations: 8
+
+  risk_assessor:
+    name: "Risk Assessor"
+    role: risk_assessor
+    goal: "Evaluate trade risk and ensure portfolio safety"
+    backstory: "Conservative risk manager focused on capital preservation"
+    tools: [market_data_query, memory_query]
+    memory_enabled: true
+    max_iterations: 5

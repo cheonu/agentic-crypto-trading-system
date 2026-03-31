@@ -1,0 +1,84 @@
+{{- range .Values.traders }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trader-{{ .name }}
+  namespace: crypto-trader
+  labels:
+    app: crypto-trader
+    trader: {{ .name }}
+    mode: {{ .mode }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crypto-trader
+      trader: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: crypto-trader
+        trader: {{ .name }}
+        mode: {{ .mode }}
+    spec:
+      serviceAccountName: {{ $.Values.serviceAccount.name }}
+      containers:
+        - name: trader
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          env:
+            - name: TRADING_MODE
+              value: {{ .mode | quote }}
+            - name: TRADING_SYMBOL
+              value: {{ .symbol | quote }}
+            - name: TRADING_INTERVAL
+              value: {{ .interval | quote }}
+            - name: TRADER_NAME
+              value: {{ .name | quote }}
+            - name: TRADING_TESTNET
+              value: {{ $.Values.testnet.enabled | quote }}
+            - name: REGIME_THRESHOLD
+              value: {{ $.Values.testnet.regimeThreshold | default "0.3" | quote }}
+            - name: BINANCE_TESTNET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: binance-testnet-key
+                  optional: true
+            - name: BINANCE_TESTNET_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: binance-testnet-secret
+                  optional: true
+            {{- if eq .mode "crewai" }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: openai-api-key
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: anthropic-api-key
+                  optional: true
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: google-ai-key
+                  optional: true
+            {{- end }}
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+          volumeMounts:
+            - name: results
+              mountPath: /app/data
+      volumes:
+        - name: results
+          emptyDir: {}
+      restartPolicy: Always
+{{- end }}
