@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fine-tune-sentiment
+  namespace: crypto-trader
+  labels:
+    app: crypto-trader
+    component: fine-tune
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: crypto-trader
+        component: fine-tune
+    spec:
+      restartPolicy: Never
+      serviceAccountName: crypto-trader-sa
+      containers:
+        - name: fine-tune
+          image: us-central1-docker.pkg.dev/project-e4ad9f18-82a4-4e98-ae4/crypto-trader/crypto-trader:latest
+          command: ["python", "scripts/fine_tune_sentiment.py"]
+          args:
+            - "--epochs"
+            - "3"
+            - "--batch-size"
+            - "16"
+            - "--learning-rate"
+            - "2e-5"
+            - "--use-lora"
+            - "--evaluate"
+            - "--output-dir"
+            - "/app/output/fine-tuned-sentiment"
+          env:
+            - name: HF_HOME
+              value: "/app/.cache/huggingface"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+          volumeMounts:
+            - name: model-output
+              mountPath: /app/output
+      volumes:
+        - name: model-output
+          persistentVolumeClaim:
+            claimName: fine-tune-output-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fine-tune-output-pvc
+  namespace: crypto-trader
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

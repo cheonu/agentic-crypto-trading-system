@@ -21,10 +21,10 @@ traders:
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 256Mi
       limits:
         cpu: 200m
-        memory: 512Mi
+        memory: 1Gi
 
   - name: crewai-openai
     mode: crewai
@@ -34,28 +34,113 @@ traders:
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 256Mi
       limits:
         cpu: 200m
-        memory: 512Mi
+        memory: 1Gi
 
   - name: crewai-anthropic
     mode: crewai
     symbol: BTC/USDT
     interval: "300"
     llmProvider: anthropic
+    sentimentModel: "ElKulako/cryptobert"  # A/B group A — baseline
     resources:
       requests:
         cpu: 50m
-        memory: 128Mi
+        memory: 256Mi
       limits:
         cpu: 200m
-        memory: 512Mi
+        memory: 1Gi
+
+  # A/B test: same config as crewai-anthropic but with fine-tuned sentiment model
+  # Uncomment and set sentimentModel after fine-tuning is complete
+  # - name: crewai-anthropic-finetuned
+  #   mode: crewai
+  #   symbol: BTC/USDT
+  #   interval: "300"
+  #   llmProvider: anthropic
+  #   sentimentModel: "your-username/finbert-crypto"  # A/B group B — fine-tuned
+  #   resources:
+  #     requests:
+  #       cpu: 50m
+  #       memory: 256Mi
+  #     limits:
+  #       cpu: 200m
+  #       memory: 1Gi
+
+  - name: crewai-gemini
+    mode: crewai
+    symbol: BTC/USDT
+    interval: "300"
+    llmProvider: google
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 1Gi
+
+  - name: crewai-deepseek
+    mode: crewai
+    symbol: BTC/USDT
+    interval: "300"
+    llmProvider: deepseek
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 1Gi
+
+  - name: crewai-grok
+    mode: crewai
+    symbol: BTC/USDT
+    interval: "300"
+    llmProvider: grok
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 1Gi
+
+  # Multi-symbol comparison (using best-performing provider: Anthropic)
+  - name: eth-anthropic
+    mode: crewai
+    symbol: ETH/USDT
+    interval: "300"
+    llmProvider: anthropic
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 1Gi
+
+  - name: sol-anthropic
+    mode: crewai
+    symbol: SOL/USDT
+    interval: "300"
+    llmProvider: anthropic
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 1Gi
 
 secrets:
   openaiKey: openai-api-key
   anthropicKey: anthropic-api-key
   googleAiKey: google-ai-key
+  deepseekKey: deepseek-api-key
+  xaiKey: xai-api-key
 
 testnet:
   enabled: "false"

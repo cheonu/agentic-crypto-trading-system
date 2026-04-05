@@ -88,8 +88,8 @@ class DayTradingStrategy:
                     stop_loss_pct=self._config.stop_loss_pct,
                 )
 
-        # --- BUY signals ---
-        if not has_position:
+        # --- BUY signals (require minimum confidence) ---
+        if not has_position and confidence >= self._config.min_buy_confidence:
             buy_reason = self._check_buy_signals(
                 transition, intraday_signals
             )
@@ -97,7 +97,7 @@ class DayTradingStrategy:
                 return TradeSignal(
                     action="BUY",
                     reason=buy_reason,
-                    confidence=max(confidence, 0.5),
+                    confidence=confidence,
                     stop_loss_pct=self._config.stop_loss_pct,
                     take_profit_pct=self._config.take_profit_pct,
                 )
@@ -118,27 +118,39 @@ class DayTradingStrategy:
         transition: Optional[str],
         intraday: IntradaySignals,
     ) -> Optional[str]:
-        """Return a reason string if a BUY signal is detected, else None."""
+        """Return a reason string if a BUY signal is detected, else None.
+
+        Requires at least 2 confirming signals to reduce false entries.
+        """
+        signals = []
 
         # 1. Regime transition to bull
         if transition == "bull":
-            return "Regime transition to bull"
+            signals.append("regime→bull")
 
         # 2. Golden cross + RSI not overbought
-        if intraday.ema_cross == "golden_cross" and intraday.rsi < 70:
-            return f"Golden cross with RSI={intraday.rsi:.0f}"
+        if intraday.ema_cross == "golden_cross" and intraday.rsi < 65:
+            signals.append(f"golden_cross(RSI={intraday.rsi:.0f})")
 
         # 3. RSI oversold bounce + upward trend
-        if intraday.rsi < 35 and intraday.trend == "up":
-            return f"RSI oversold bounce ({intraday.rsi:.0f}) with uptrend"
+        if intraday.rsi < 30 and intraday.trend == "up":
+            signals.append(f"RSI_bounce({intraday.rsi:.0f})")
 
         # 4. Price above VWAP + positive momentum + upward trend
         if (
             intraday.vwap_position == "above"
-            and intraday.momentum > 0.3
+            and intraday.momentum > 0.4
             and intraday.trend == "up"
         ):
-            return f"Above VWAP with strong momentum ({intraday.momentum:.2f})"
+            signals.append(f"VWAP_momentum({intraday.momentum:.2f})")
+
+        # Require at least 2 confirming signals
+        if len(signals) >= 2:
+            return f"Confirmed entry: {' + '.join(signals)}"
+
+        # Allow single signal only for strong regime transition with uptrend
+        if transition == "bull" and intraday.trend == "up":
+            return f"Regime bull + uptrend"
 
         return None
 
@@ -157,21 +169,21 @@ class DayTradingStrategy:
         if transition == "bear":
             return "Regime transition to bear"
 
-        # 2. Death cross
-        if intraday.ema_cross == "death_cross":
-            return "Death cross detected"
+        # 2. Death cross + downtrend confirmation
+        if intraday.ema_cross == "death_cross" and intraday.trend == "down":
+            return "Death cross confirmed by downtrend"
 
-        # 3. RSI overbought — take profits
-        if intraday.rsi > 75:
+        # 3. RSI overbought — take profits (tighter threshold)
+        if intraday.rsi > 72:
             return f"RSI overbought ({intraday.rsi:.0f}), taking profits"
 
-        # 4. Price below VWAP + negative momentum
+        # 4. Price below VWAP + strong negative momentum
         if (
             intraday.vwap_position == "below"
-            and intraday.momentum < -0.3
+            and intraday.momentum < -0.4
             and intraday.trend == "down"
         ):
-            return f"Below VWAP with negative momentum ({intraday.momentum:.2f})"
+            return f"Below VWAP with strong negative momentum ({intraday.momentum:.2f})"
 
         return None
 

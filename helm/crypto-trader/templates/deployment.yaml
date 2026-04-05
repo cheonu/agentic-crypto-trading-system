@@ -40,6 +40,8 @@ spec:
               value: {{ $.Values.testnet.enabled | quote }}
             - name: REGIME_THRESHOLD
               value: {{ $.Values.testnet.regimeThreshold | default "0.3" | quote }}
+            - name: SENTIMENT_MODEL_NAME
+              value: {{ .sentimentModel | default "ElKulako/cryptobert" | quote }}
             - name: BINANCE_TESTNET_KEY
               valueFrom:
                 secretKeyRef:
@@ -53,24 +55,44 @@ spec:
                   key: binance-testnet-secret
                   optional: true
             {{- if eq .mode "crewai" }}
+            - name: LLM_PROVIDER
+              value: {{ .llmProvider | default "openai" | quote }}
+            {{- if eq (.llmProvider | default "openai") "openai" }}
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: api-keys
                   key: openai-api-key
                   optional: true
+            {{- else if eq .llmProvider "anthropic" }}
             - name: ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: api-keys
                   key: anthropic-api-key
                   optional: true
+            {{- else if eq .llmProvider "google" }}
             - name: GOOGLE_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: api-keys
                   key: google-ai-key
                   optional: true
+            {{- else if eq .llmProvider "deepseek" }}
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: deepseek-api-key
+                  optional: true
+            {{- else if eq .llmProvider "grok" }}
+            - name: XAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: xai-api-key
+                  optional: true
+            {{- end }}
             {{- end }}
           resources:
             {{- toYaml .resources | nindent 12 }}

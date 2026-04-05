@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 from crewai import Agent as CrewAgent
@@ -94,6 +95,30 @@ class CrewAIFramework(AgentFramework):
         self.crew_agents: Dict[AgentRole, CrewAgent] = {}
         self.agent_states: Dict[AgentRole, AgentState] = {}
         self.crew_tools: List[CrewBaseTool] = []
+        self.llm = self._resolve_llm()
+
+    @staticmethod
+    def _resolve_llm() -> Optional[str]:
+        """Resolve the LLM model string based on LLM_PROVIDER env var.
+
+        CrewAI accepts model strings like:
+        - "openai/gpt-4o-mini" (default)
+        - "anthropic/claude-3-5-sonnet-20241022"
+        - "gemini/gemini-2.0-flash"
+        """
+        provider = os.getenv("LLM_PROVIDER", "").lower()
+        if provider == "anthropic":
+            return "anthropic/claude-3-5-sonnet-20241022"
+        elif provider == "google":
+            return "gemini/gemini-2.0-flash"
+        elif provider == "deepseek":
+            return "deepseek/deepseek-chat"
+        elif provider == "grok":
+            return "xai/grok-3-mini"
+        elif provider == "openai":
+            return "openai/gpt-4o-mini"
+        # No provider set — let CrewAI auto-detect from env vars
+        return None
 
     def create_agent(self, config: AgentConfig) -> CrewAgent:
         """Create a CrewAI agent from our AgentConfig.
@@ -115,6 +140,7 @@ class CrewAIFramework(AgentFramework):
             memory=config.memory_enabled,
             verbose=config.verbose or self.verbose,
             max_iter=config.max_iterations,
+            **({"llm": self.llm} if self.llm else {}),
         )
 
         self.crew_agents[config.role] = crew_agent

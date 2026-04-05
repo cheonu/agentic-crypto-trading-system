@@ -5,7 +5,8 @@ take-profit, trailing stop, signal weights, and operational settings.
 """
 
 import math
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -19,10 +20,10 @@ class DayTradingConfig:
     Raises ValueError with a descriptive message on any validation failure.
     """
 
-    stop_loss_pct: float = 0.015        # 1.5% stop-loss for protection
-    take_profit_pct: float = 0.5         # 50% — effectively disabled, ride the wave
+    stop_loss_pct: float = 0.008         # 0.8% stop-loss — tight for scalping
+    take_profit_pct: float = 0.02        # 2.0% take-profit — 2.5:1 reward/risk
     trailing_stop_enabled: bool = True
-    trailing_stop_pct: float = 0.008     # 0.8% trailing stop locks in gains
+    trailing_stop_pct: float = 0.012     # 1.2% trailing stop — wider than SL to let winners run
     news_weight: float = 0.1
     intraday_weight: float = 0.6
     regime_weight: float = 0.3
@@ -32,8 +33,18 @@ class DayTradingConfig:
     news_cache_ttl_minutes: int = 15
     portfolio_value: float = 100.0
     risk_per_trade_pct: float = 1.0      # all-in
+    min_buy_confidence: float = 0.55     # minimum confidence to enter a trade
+    sentiment_model_name: str = "ElKulako/cryptobert"
+    news_api_key: str = ""
+    news_source: str = "rss"
 
     def __post_init__(self) -> None:
+        # Override from environment variables
+        self.sentiment_model_name = os.environ.get(
+            "SENTIMENT_MODEL_NAME", self.sentiment_model_name
+        )
+        self.news_api_key = os.environ.get("NEWS_API_KEY", self.news_api_key)
+
         # Validate percentage fields are in (0, 1) exclusive
         pct_fields = {
             "stop_loss_pct": self.stop_loss_pct,

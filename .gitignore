@@ -12,3 +12,6 @@ venv/
 terraform/.terraform/
 terraform/*.tfstate*
 terraform/.terraform.lock.hcl
+.hypothesis/
+output/
+.coverage

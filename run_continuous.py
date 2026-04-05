@@ -119,7 +119,10 @@ def init_day_trading_components() -> None:
     )
 
     news_provider = NewsSignalProvider(
+        api_key=day_trading_config.news_api_key,
         cache_ttl_minutes=day_trading_config.news_cache_ttl_minutes,
+        sources=[day_trading_config.news_source],
+        model_name=day_trading_config.sentiment_model_name,
     )
 
     stop_loss_monitor = StopLossMonitor(
@@ -244,18 +247,38 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
                 f"({filtered_signal.reason})"
             )
 
-        # 9. Existing pipeline: only run if signal is not HOLD
+        # 9. Execute based on day trading strategy signal directly
+        # The strategy signal is authoritative — agents provide additional
+        # context but don't override the signal direction.
         execution = {"executed": False}
-        debate_result = {"position": "HOLD", "confidence": 0.0, "rounds": 0, "reasoning": ""}
+        debate_result = {"position": filtered_signal.action, "confidence": filtered_signal.confidence, "rounds": 0, "reasoning": filtered_signal.reason}
         risk_result = {"approved": False}
 
         if filtered_signal.action != "HOLD":
+            # Run agents for logging/context, but use strategy signal for execution
             agent_results = await run_agents(market_data, regime, sentiment)
             debate_result = run_debate(agent_results, regime, sentiment)
-            risk_result = check_risk(debate_result, market_data)
-            execution = execute_trade(risk_result, market_data)
+
+            # Force the trade direction to match the strategy signal
+            exec_side = "buy" if filtered_signal.action == "BUY" else "sell"
+            price = market_data["price"]
+            slippage = price * 0.0005
+            exec_price = price + slippage if exec_side == "buy" else price - slippage
+
+            execution = {
+                "executed": True,
+                "mode": "paper",
+                "symbol": market_data["symbol"],
+                "side": exec_side,
+                "price": round(exec_price, 2),
+                "size": trade_size,
+            }
+            logger.info(
+                f"  EXECUTED: {exec_side.upper()} {trade_size} {base_symbol} "
+                f"@ ${exec_price:,.2f} (reason: {filtered_signal.reason})"
+            )
         else:
-            logger.info("  Pipeline: Skipping agents/debate/risk/execute (HOLD)")
+            logger.info("  Pipeline: Skipping execution (HOLD)")
 
         # 10. Update PositionManager after trade execution (NEW)
         if execution.get("executed"):
@@ -345,6 +368,7 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
             "win_rate": round(win_rate, 1),
             "elapsed_seconds": round(elapsed, 2),
             "mode": os.getenv("TRADING_MODE", "langgraph"),
+            "sentiment_model": day_trading_config.sentiment_model_name,
         }
 
         save_result(result)

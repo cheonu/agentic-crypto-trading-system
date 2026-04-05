@@ -360,8 +360,8 @@ def _execute_testnet(trade: Dict, market_data: Dict) -> Dict:
     side = trade["side"]
     price = market_data["price"]
 
-    # Use a small fixed amount for testnet (0.001 BTC)
-    amount = 0.001
+    # Use $15 worth of the asset to stay above Binance minimum notional ($5-10)
+    amount = round(15.0 / price, 6) if price > 0 else 0.001
 
     try:
         # Place market order on testnet
