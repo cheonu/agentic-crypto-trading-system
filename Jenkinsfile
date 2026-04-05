@@ -58,7 +58,7 @@ spec:
                         docker build --platform linux/amd64 \
                             -t ${FULL_IMAGE} \
                             -t ${LATEST_IMAGE} \
-                            agentic-crypto-trading-system/
+                            .
                     """
                 }
             }
@@ -104,7 +104,7 @@ spec:
                             curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
                             # Deploy with Helm
-                            helm upgrade crypto-trader agentic-crypto-trading-system/helm/crypto-trader \
+                            helm upgrade crypto-trader helm/crypto-trader \
                                 --namespace ${K8S_NAMESPACE} \
                                 --set image.repository=${REGISTRY}/${IMAGE_NAME} \
                                 --set image.tag=${IMAGE_TAG} \
