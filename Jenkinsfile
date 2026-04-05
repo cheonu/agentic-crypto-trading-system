@@ -10,6 +10,9 @@ spec:
     image: docker:24-dind
     securityContext:
       privileged: true
+    resources:
+      requests:
+        ephemeral-storage: "15Gi"
     volumeMounts:
     - name: docker-storage
       mountPath: /var/lib/docker
