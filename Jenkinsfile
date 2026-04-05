@@ -12,7 +12,7 @@ spec:
       privileged: true
     resources:
       requests:
-        ephemeral-storage: "15Gi"
+        ephemeral-storage: "2Gi"
     volumeMounts:
     - name: docker-storage
       mountPath: /var/lib/docker

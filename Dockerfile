@@ -13,11 +13,13 @@ COPY pyproject.toml poetry.lock ./
 # Install CPU-only torch FIRST to prevent CUDA deps from being pulled
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install project deps (torch already satisfied via pip, skip reinstall)
+# Install project deps — tell pip to not reinstall torch during poetry install
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root \
-    && pip install --no-cache-dir --no-deps torch --index-url https://download.pytorch.org/whl/cpu \
-    && rm -rf /root/.cache
+    && PIP_NO_DEPS=0 poetry install --no-interaction --no-ansi --no-root \
+    && rm -rf /root/.cache \
+    && pip install --no-cache-dir --force-reinstall --no-deps torch --index-url https://download.pytorch.org/whl/cpu \
+    && rm -rf /root/.cache /tmp/* \
+    && find /usr/local/lib/python3.13/site-packages/nvidia -type d -exec rm -rf {} + 2>/dev/null || true
 
 # HuggingFace model cache — pre-download during build so pods start offline
 ENV HF_HOME=/app/.cache/huggingface
