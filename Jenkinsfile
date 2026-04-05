@@ -6,30 +6,11 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: docker
-    image: docker:24-dind
-    securityContext:
-      privileged: true
-    resources:
-      requests:
-        ephemeral-storage: "2Gi"
-    volumeMounts:
-    - name: docker-storage
-      mountPath: /var/lib/docker
-    - name: shared
-      mountPath: /shared
   - name: gcloud
     image: google/cloud-sdk:slim
     command: ['sleep']
     args: ['infinity']
-    volumeMounts:
-    - name: shared
-      mountPath: /shared
-  volumes:
-  - name: docker-storage
-    emptyDir: {}
-  - name: shared
-    emptyDir: {}
+  volumes: []
 '''
         }
     }
@@ -54,41 +35,21 @@ spec:
             }
         }
 
-        stage('Build Image') {
-            steps {
-                container('docker') {
-                    sh """
-                        docker build --platform linux/amd64 \
-                            -t ${FULL_IMAGE} \
-                            -t ${LATEST_IMAGE} \
-                            .
-                    """
-                }
-            }
-        }
-
-        stage('Auth to Artifact Registry') {
+        stage('Build and Push Image') {
             steps {
                 container('gcloud') {
                     withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GCP_KEY')]) {
                         sh """
                             gcloud auth activate-service-account --key-file=\$GCP_KEY
-                            gcloud auth print-access-token | tr -d '\\n' > /shared/gcp-token
+                            gcloud builds submit \
+                                --project ${PROJECT_ID} \
+                                --region ${REGION} \
+                                --tag ${FULL_IMAGE} \
+                                --timeout=1800s \
+                                .
+                            gcloud artifacts docker tags add ${FULL_IMAGE} ${LATEST_IMAGE}
                         """
                     }
-                }
-            }
-        }
-
-        stage('Push to Artifact Registry') {
-            steps {
-                container('docker') {
-                    sh """
-                        TOKEN=\$(cat /shared/gcp-token)
-                        echo "\$TOKEN" | docker login -u oauth2accesstoken --password-stdin https://${REGION}-docker.pkg.dev
-                        docker push ${FULL_IMAGE}
-                        docker push ${LATEST_IMAGE}
-                    """
                 }
             }
         }
