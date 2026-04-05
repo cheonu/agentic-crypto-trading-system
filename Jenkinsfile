@@ -41,13 +41,37 @@ spec:
                     withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GCP_KEY')]) {
                         sh """
                             gcloud auth activate-service-account --key-file=\$GCP_KEY
-                            gcloud builds submit \
+                            
+                            # Submit build asynchronously
+                            BUILD_ID=\$(gcloud builds submit \
                                 --project ${PROJECT_ID} \
                                 --region ${REGION} \
                                 --tag ${FULL_IMAGE} \
                                 --timeout=1800s \
-                                .
-                            gcloud artifacts docker tags add ${FULL_IMAGE} ${LATEST_IMAGE}
+                                --async \
+                                --format='value(id)' \
+                                .)
+                            
+                            echo "Cloud Build started: \$BUILD_ID"
+                            
+                            # Wait for build to complete
+                            while true; do
+                                STATUS=\$(gcloud builds describe \$BUILD_ID \
+                                    --project ${PROJECT_ID} \
+                                    --region ${REGION} \
+                                    --format='value(status)')
+                                echo "Build status: \$STATUS"
+                                if [ "\$STATUS" = "SUCCESS" ]; then
+                                    break
+                                elif [ "\$STATUS" = "FAILURE" ] || [ "\$STATUS" = "TIMEOUT" ] || [ "\$STATUS" = "CANCELLED" ]; then
+                                    echo "Build failed with status: \$STATUS"
+                                    exit 1
+                                fi
+                                sleep 30
+                            done
+                            
+                            # Tag as latest
+                            gcloud artifacts docker tags add ${FULL_IMAGE} ${LATEST_IMAGE} 2>/dev/null || true
                         """
                     }
                 }
