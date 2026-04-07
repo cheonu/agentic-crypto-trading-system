@@ -148,9 +148,13 @@ class DayTradingStrategy:
         if len(signals) >= 2:
             return f"Confirmed entry: {' + '.join(signals)}"
 
-        # Allow single signal only for strong regime transition with uptrend
+        # Allow single signal for strong regime transition with uptrend
         if transition == "bull" and intraday.trend == "up":
-            return f"Regime bull + uptrend"
+            return "Regime bull + uptrend"
+
+        # Allow single signal for golden cross with uptrend
+        if intraday.ema_cross == "golden_cross" and intraday.trend == "up" and intraday.rsi < 65:
+            return f"Golden cross + uptrend (RSI={intraday.rsi:.0f})"
 
         return None
 

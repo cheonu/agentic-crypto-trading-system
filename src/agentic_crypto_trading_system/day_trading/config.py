@@ -24,8 +24,8 @@ class DayTradingConfig:
     take_profit_pct: float = 0.02        # 2.0% take-profit — 2.5:1 reward/risk
     trailing_stop_enabled: bool = True
     trailing_stop_pct: float = 0.012     # 1.2% trailing stop — wider than SL to let winners run
-    news_weight: float = 0.1
-    intraday_weight: float = 0.6
+    news_weight: float = 0.2
+    intraday_weight: float = 0.5
     regime_weight: float = 0.3
     max_positions: int = 1
     intraday_candle_timeframe: str = "5m"
@@ -33,7 +33,7 @@ class DayTradingConfig:
     news_cache_ttl_minutes: int = 15
     portfolio_value: float = 100.0
     risk_per_trade_pct: float = 1.0      # all-in
-    min_buy_confidence: float = 0.55     # minimum confidence to enter a trade
+    min_buy_confidence: float = 0.45     # lowered from 0.55 to catch more moves
     sentiment_model_name: str = "ElKulako/cryptobert"
     news_api_key: str = ""
     news_source: str = "rss"
