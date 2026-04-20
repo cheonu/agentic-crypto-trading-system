@@ -234,8 +234,13 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
         # 8. FeeAwareFilter (NEW)
         # All-in: use full portfolio value to calculate trade size
         price = market_data["price"]
-        trade_size = round(day_trading_config.portfolio_value / price, 6)
+        #trade_size = round(day_trading_config.portfolio_value / price, 6)
         # Ensure minimum trade size for Binance (0.00001 BTC)
+        # New: risk-based position sizing
+        risk_amount = day_trading_config.portfolio_value * day_trading_config.risk_per_trade_pct
+        trade_size = round(risk_amount / price, 6)
+        trade_size = max(trade_size, 0.00001)  # Binance minimum
+
         trade_size = max(trade_size, 0.00001)
 
         filtered_signal = fee_filter.filter_signal(
@@ -320,6 +325,21 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
         win_rate = (len(wins) / total_trades * 100) if total_trades > 0 else 0
         avg_win = (sum(t.realized_pnl for t in wins) / len(wins)) if wins else 0
         avg_loss = (sum(t.realized_pnl for t in losses) / len(losses)) if losses else 0
+
+        # Daily loss circuit breaker
+        trade_history = position_manager.get_trade_history()
+        today_trades = [t for t in trade_history 
+                        if t.exit_time.date() == datetime.now(UTC).date()]
+        today_pnl = sum(t.realized_pnl for t in today_trades)
+        max_daily_loss = day_trading_config.portfolio_value * day_trading_config.max_daily_loss_pct
+
+        if today_pnl < -max_daily_loss:
+            logger.warning(
+                "Daily loss limit hit: $%.2f (limit: $%.2f). Skipping cycle.",
+                today_pnl, -max_daily_loss,
+            )
+            return {"cycle": cycle_num, "skipped": "daily_loss_limit"}
+
 
         # Unrealized P&L from open positions
         unrealized_pnl = 0.0

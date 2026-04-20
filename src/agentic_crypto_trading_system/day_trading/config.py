@@ -31,12 +31,14 @@ class DayTradingConfig:
     intraday_candle_timeframe: str = "5m"
     intraday_candle_count: int = 50
     news_cache_ttl_minutes: int = 15
-    portfolio_value: float = 100.0
-    risk_per_trade_pct: float = 1.0      # all-in
+    portfolio_value: float = 0.0
+    risk_per_trade_pct: float = 0.30      # all-in
     min_buy_confidence: float = 0.45     # lowered from 0.55 to catch more moves
     sentiment_model_name: str = "ElKulako/cryptobert"
     news_api_key: str = ""
     news_source: str = "rss"
+    max_daily_loss_pct: float = 0.05      # stop trading if down 5% in a day
+    trading_mode: str = "paper"
 
     def __post_init__(self) -> None:
         # Override from environment variables
@@ -44,6 +46,10 @@ class DayTradingConfig:
             "SENTIMENT_MODEL_NAME", self.sentiment_model_name
         )
         self.news_api_key = os.environ.get("NEWS_API_KEY", self.news_api_key)
+        # Add these after the existing env var overrides:
+        self.portfolio_value = float(os.environ.get("PORTFOLIO_VALUE", "100.0"))
+        self.trading_mode = os.environ.get("TRADING_MODE_LIVE", "paper")
+
 
         # Validate percentage fields are in (0, 1) exclusive
         pct_fields = {

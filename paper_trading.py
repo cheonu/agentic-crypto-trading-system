@@ -1,11 +1,11 @@
 """Paper Trading — full pipeline on real market data.
 
 Supports two modes:
-- PAPER: Simulated execution (no exchange account needed)
-- TESTNET: Real orders on Binance testnet (free fake money)
+- PAPER: Simulated execution (no real orders)
+- LIVE: Real orders on the exchange
 
-Set TRADING_TESTNET=true and provide BINANCE_TESTNET_KEY / BINANCE_TESTNET_SECRET
-to enable testnet mode.
+Set TRADING_LIVE=true and provide EXCHANGE_API_KEY / EXCHANGE_API_SECRET
+to enable live trading.
 
 Usage:
     poetry run python paper_trading.py
@@ -58,29 +58,32 @@ PAPER_POSITION_STATE_FILE = Path("data/paper_position_state.json")
 
 # ─── Exchange Setup ───
 
-def get_exchange() -> ccxt.binance:
-    """Create exchange instance. Uses testnet if configured."""
-    use_testnet = os.getenv("TRADING_TESTNET", "false").lower() == "true"
-    api_key = os.getenv("BINANCE_TESTNET_KEY", "")
-    api_secret = os.getenv("BINANCE_TESTNET_SECRET", "")
+def get_exchange():
+    """Create exchange instance. Supports Kraken (live) and Binance (testnet)."""
+    exchange_name = os.getenv("EXCHANGE", "kraken")
+    live_trading = os.getenv("TRADING_LIVE", "false").lower() == "true"
+    api_key = os.getenv("EXCHANGE_API_KEY", "")
+    api_secret = os.getenv("EXCHANGE_API_SECRET", "")
 
     config = {"enableRateLimit": True}
 
-    if use_testnet and api_key and api_secret:
+    if api_key and api_secret:
         config["apiKey"] = api_key
         config["secret"] = api_secret
-        config["sandbox"] = True  # This switches to testnet URLs
-        logger.info("Using Binance TESTNET (sandbox mode)")
-    else:
-        logger.info("Using Binance public API (read-only)")
 
-    return ccxt.binance(config)
+    if not live_trading:
+        logger.info("Using %s in PAPER mode (no real orders)", exchange_name)
+    else:
+        logger.info("Using %s in LIVE mode (real orders)", exchange_name)
+
+    exchange_class = getattr(ccxt, exchange_name)
+    return exchange_class(config)
 
 
 # ─── Step 1: Fetch live market data ───
 
 def fetch_market_data(symbol: str = "BTC/USDT") -> Dict:
-    """Fetch real market data from Binance."""
+    """Fetch real market data from the configured exchange."""
     exchange = get_exchange()
 
     logger.info(f"Fetching market data for {symbol}...")
@@ -345,22 +348,22 @@ def execute_trade(risk_result: Dict, market_data: Dict) -> Dict:
         return {"executed": False}
 
     trade = risk_result["trade"]
-    use_testnet = os.getenv("TRADING_TESTNET", "false").lower() == "true"
+    live_trading = os.getenv("TRADING_LIVE", "false").lower() == "true"
 
-    if use_testnet:
-        return _execute_testnet(trade, market_data)
+    if live_trading:
+        return _execute_live(trade, market_data)
     else:
         return _execute_paper(trade, market_data)
 
 
-def _execute_testnet(trade: Dict, market_data: Dict) -> Dict:
-    """Place a real order on Binance testnet."""
+def _execute_live(trade: Dict, market_data: Dict) -> Dict:
+    """Place a real order on the exchange."""
     exchange = get_exchange()
     symbol = trade["symbol"]
     side = trade["side"]
     price = market_data["price"]
 
-    # Use $15 worth of the asset to stay above Binance minimum notional ($5-10)
+    # Use $15 worth of the asset to stay above exchange minimum notional ($5-10)
     amount = round(15.0 / price, 6) if price > 0 else 0.001
 
     try:

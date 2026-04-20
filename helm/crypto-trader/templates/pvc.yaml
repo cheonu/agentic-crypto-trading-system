@@ -1,0 +1,17 @@
+{{- range .Values.traders }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trader-{{ .name }}-data
+  namespace: crypto-trader
+  labels:
+    app: crypto-trader
+    trader: {{ .name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+{{- end }}

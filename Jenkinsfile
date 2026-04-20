@@ -16,16 +16,16 @@ spec:
     }
 
     environment {
-        PROJECT_ID     = 'project-e4ad9f18-82a4-4e98-ae4'
-        REGION         = 'europe-west1'
+        PROJECT_ID     = 'project-1d27d756-d198-495b-b0f'
+        REGION         = 'us-central1'
         REGISTRY       = "${REGION}-docker.pkg.dev/${PROJECT_ID}/crypto-trader"
         IMAGE_NAME     = 'crypto-trader'
         IMAGE_TAG      = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
         FULL_IMAGE     = "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
         LATEST_IMAGE   = "${REGISTRY}/${IMAGE_NAME}:latest"
         K8S_NAMESPACE  = 'crypto-trader'
-        GKE_CLUSTER    = 'crypto-trader-eu'
-        GKE_ZONE       = 'europe-west1-b'
+        GKE_CLUSTER    = 'crypto-trader'
+        GKE_ZONE       = 'us-central1-a'
     }
 
     stages {

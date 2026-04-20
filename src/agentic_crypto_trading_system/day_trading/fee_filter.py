@@ -29,7 +29,7 @@ class FeeAwareFilter:
 
     def __init__(
         self,
-        base_fee_rate: float = 0.001,
+        base_fee_rate: float = 0.0026,
         bnb_discount_enabled: bool = False,
         bnb_discount_rate: float = 0.25,
         min_profit_fee_ratio: float = 2.5,

@@ -36,24 +36,24 @@ spec:
               value: {{ .interval | quote }}
             - name: TRADER_NAME
               value: {{ .name | quote }}
-            - name: TRADING_TESTNET
-              value: {{ $.Values.testnet.enabled | quote }}
+            - name: TRADING_LIVE
+              value: {{ $.Values.liveTrading.enabled | quote }}
             - name: REGIME_THRESHOLD
-              value: {{ $.Values.testnet.regimeThreshold | default "0.3" | quote }}
+              value: {{ $.Values.liveTrading.regimeThreshold | default "0.3" | quote }}
             - name: SENTIMENT_MODEL_NAME
               value: {{ .sentimentModel | default "ElKulako/cryptobert" | quote }}
-            - name: BINANCE_TESTNET_KEY
+            - name: EXCHANGE
+              value: "kraken"
+            - name: EXCHANGE_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: api-keys
-                  key: binance-testnet-key
-                  optional: true
-            - name: BINANCE_TESTNET_SECRET
+                  key: exchange-api-key
+            - name: EXCHANGE_API_SECRET
               valueFrom:
                 secretKeyRef:
                   name: api-keys
-                  key: binance-testnet-secret
-                  optional: true
+                  key: exchange-api-secret
             {{- if eq .mode "crewai" }}
             - name: LLM_PROVIDER
               value: {{ .llmProvider | default "openai" | quote }}
@@ -101,6 +101,7 @@ spec:
               mountPath: /app/data
       volumes:
         - name: results
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: trader-{{ .name }}-data
       restartPolicy: Always
 {{- end }}

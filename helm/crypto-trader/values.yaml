@@ -3,136 +3,29 @@
 replicaCount: 1
 
 image:
-  repository: us-central1-docker.pkg.dev/project-e4ad9f18-82a4-4e98-ae4/crypto-trader/crypto-trader
+  repository: us-central1-docker.pkg.dev/project-1d27d756-d198-495b-b0f/crypto-trader/crypto-trader
   tag: latest
   pullPolicy: Always
 
 serviceAccount:
   name: crypto-trader-sa
   annotations:
-    iam.gke.io/gcp-service-account: crypto-trader-sa@project-e4ad9f18-82a4-4e98-ae4.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: crypto-trader-sa@project-1d27d756-d198-495b-b0f.iam.gserviceaccount.com
 
-# Deploy 3 trading instances with minimal resources for free tier
+# Production: single best-performing agent
 traders:
-  - name: langgraph-baseline
-    mode: langgraph
-    symbol: BTC/USDT
-    interval: "300"
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
-        memory: 1Gi
-
-  - name: crewai-openai
-    mode: crewai
-    symbol: BTC/USDT
-    interval: "300"
-    llmProvider: openai
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
-        memory: 1Gi
-
-  - name: crewai-anthropic
-    mode: crewai
-    symbol: BTC/USDT
-    interval: "300"
-    llmProvider: anthropic
-    sentimentModel: "ElKulako/cryptobert"  # A/B group A — baseline
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
-        memory: 1Gi
-
-  # A/B test: same config as crewai-anthropic but with fine-tuned sentiment model
-  # Uncomment and set sentimentModel after fine-tuning is complete
-  # - name: crewai-anthropic-finetuned
-  #   mode: crewai
-  #   symbol: BTC/USDT
-  #   interval: "300"
-  #   llmProvider: anthropic
-  #   sentimentModel: "your-username/finbert-crypto"  # A/B group B — fine-tuned
-  #   resources:
-  #     requests:
-  #       cpu: 50m
-  #       memory: 256Mi
-  #     limits:
-  #       cpu: 200m
-  #       memory: 1Gi
-
-  - name: crewai-gemini
-    mode: crewai
-    symbol: BTC/USDT
-    interval: "300"
-    llmProvider: google
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
-        memory: 1Gi
-
-  - name: crewai-deepseek
-    mode: crewai
-    symbol: BTC/USDT
-    interval: "300"
-    llmProvider: deepseek
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
-        memory: 1Gi
-
   - name: crewai-grok
     mode: crewai
     symbol: BTC/USDT
     interval: "300"
     llmProvider: grok
+    sentimentModel: "ElKulako/cryptobert"
     resources:
       requests:
-        cpu: 50m
-        memory: 256Mi
+        cpu: 100m
+        memory: 512Mi
       limits:
-        cpu: 200m
-        memory: 1Gi
-
-  # Multi-symbol comparison (using best-performing provider: Anthropic)
-  - name: eth-anthropic
-    mode: crewai
-    symbol: ETH/USDT
-    interval: "300"
-    llmProvider: anthropic
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
-        memory: 1Gi
-
-  - name: sol-anthropic
-    mode: crewai
-    symbol: SOL/USDT
-    interval: "300"
-    llmProvider: anthropic
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-      limits:
-        cpu: 200m
+        cpu: 500m
         memory: 1Gi
 
 secrets:
@@ -142,6 +35,6 @@ secrets:
   deepseekKey: deepseek-api-key
   xaiKey: xai-api-key
 
-testnet:
-  enabled: "false"
-  regimeThreshold: "0.3"  # Lower = more trades. Default 2.0 for production, 0.3 for testing
+liveTrading:
+  enabled: "true"
+  regimeThreshold: "0.3"
