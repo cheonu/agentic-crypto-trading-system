@@ -24,7 +24,7 @@ import os
 import signal
 import sys
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -38,6 +38,7 @@ from paper_trading import (
     run_debate,
     check_risk,
     execute_trade,
+    get_exchange,
 )
 
 from agentic_crypto_trading_system.day_trading import (
@@ -50,6 +51,7 @@ from agentic_crypto_trading_system.day_trading import (
     StopLossMonitor,
     TradingSessionManager,
 )
+from agentic_crypto_trading_system.day_trading.models import TradeSignal
 
 logging.basicConfig(
     level=logging.INFO,
@@ -267,21 +269,50 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
             # Force the trade direction to match the strategy signal
             exec_side = "buy" if filtered_signal.action == "BUY" else "sell"
             price = market_data["price"]
-            slippage = price * 0.0005
-            exec_price = price + slippage if exec_side == "buy" else price - slippage
 
-            execution = {
-                "executed": True,
-                "mode": "paper",
-                "symbol": market_data["symbol"],
-                "side": exec_side,
-                "price": round(exec_price, 2),
-                "size": trade_size,
-            }
-            logger.info(
-                f"  EXECUTED: {exec_side.upper()} {trade_size} {base_symbol} "
-                f"@ ${exec_price:,.2f} (reason: {filtered_signal.reason})"
-            )
+            live_trading = os.getenv("TRADING_LIVE", "false").lower() == "true"
+
+            if live_trading:
+                # Place real order on exchange
+                try:
+                    exchange = get_exchange()
+                    order = exchange.create_market_order(
+                        symbol,
+                        exec_side,
+                        trade_size,
+                    )
+                    exec_price = order.get("average", order.get("price", price))
+                    logger.info(
+                        f"  LIVE ORDER: {exec_side.upper()} {trade_size} {base_symbol} "
+                        f"@ ${exec_price:,.2f} (order_id: {order.get('id', 'unknown')})"
+                    )
+                except Exception as e:
+                    logger.error(f"  LIVE ORDER FAILED: {e}")
+                    logger.warning("  Skipping trade — no position will be recorded")
+                    execution = {"executed": False}
+                    filtered_signal = TradeSignal(
+                        action="HOLD", reason=f"Live order failed: {e}",
+                        confidence=filtered_signal.confidence,
+                        stop_loss_pct=filtered_signal.stop_loss_pct,
+                    )
+            else:
+                # Paper mode — simulate with slippage
+                slippage = price * 0.0005
+                exec_price = price + slippage if exec_side == "buy" else price - slippage
+
+            if execution.get("executed", True) and filtered_signal.action != "HOLD":
+                execution = {
+                    "executed": True,
+                    "mode": "live" if live_trading else "paper",
+                    "symbol": market_data["symbol"],
+                    "side": exec_side,
+                    "price": round(exec_price, 2),
+                    "size": trade_size,
+                }
+                logger.info(
+                    f"  EXECUTED: {exec_side.upper()} {trade_size} {base_symbol} "
+                    f"@ ${exec_price:,.2f} (reason: {filtered_signal.reason})"
+                )
         else:
             logger.info("  Pipeline: Skipping execution (HOLD)")
 

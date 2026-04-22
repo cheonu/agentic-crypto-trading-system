@@ -139,7 +139,7 @@ class DayTradingStrategy:
         # 4. Price above VWAP + positive momentum + upward trend
         if (
             intraday.vwap_position == "above"
-            and intraday.momentum > 0.4
+            and intraday.momentum > 0.2
             and intraday.trend == "up"
         ):
             signals.append(f"VWAP_momentum({intraday.momentum:.2f})")
@@ -155,6 +155,10 @@ class DayTradingStrategy:
         # Allow single signal for golden cross with uptrend
         if intraday.ema_cross == "golden_cross" and intraday.trend == "up" and intraday.rsi < 65:
             return f"Golden cross + uptrend (RSI={intraday.rsi:.0f})"
+
+        # Allow single signal for VWAP breakout with uptrend and decent momentum
+        if intraday.vwap_position == "above" and intraday.trend == "up" and intraday.momentum > 0.2:
+            return f"VWAP breakout + uptrend (momentum={intraday.momentum:.2f})"
 
         return None
 

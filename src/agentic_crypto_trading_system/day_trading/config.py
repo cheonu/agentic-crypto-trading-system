@@ -32,8 +32,8 @@ class DayTradingConfig:
     intraday_candle_count: int = 50
     news_cache_ttl_minutes: int = 15
     portfolio_value: float = 0.0
-    risk_per_trade_pct: float = 0.30      # all-in
-    min_buy_confidence: float = 0.45     # lowered from 0.55 to catch more moves
+    risk_per_trade_pct: float = 1.0       # all-in
+    min_buy_confidence: float = 0.40     # lowered to catch sustained uptrends
     sentiment_model_name: str = "ElKulako/cryptobert"
     news_api_key: str = ""
     news_source: str = "rss"

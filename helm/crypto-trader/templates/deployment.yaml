@@ -44,6 +44,8 @@ spec:
               value: {{ .sentimentModel | default "ElKulako/cryptobert" | quote }}
             - name: EXCHANGE
               value: "kraken"
+            - name: PORTFOLIO_VALUE
+              value: "245"
             - name: EXCHANGE_API_KEY
               valueFrom:
                 secretKeyRef:

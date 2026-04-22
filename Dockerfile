@@ -52,7 +52,7 @@ COPY --from=builder /app/pyproject.toml /app/
 
 ENV HF_HOME=/app/.cache/huggingface
 ENV TRADING_INTERVAL=300
-ENV TRADING_SYMBOL=BTC/USDT
+ENV TRADING_SYMBOL=BTC/CAD
 ENV TRADING_MODE=langgraph
 
 CMD ["python", "run_continuous.py"]
