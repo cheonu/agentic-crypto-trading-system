@@ -140,6 +140,50 @@ def init_day_trading_components() -> None:
 
     fee_filter = FeeAwareFilter(min_profit_fee_ratio=1.5)  # lower for scalping
 
+    # Sync with exchange — detect open positions that local state doesn't know about
+    live_trading = os.getenv("TRADING_LIVE", "false").lower() == "true"
+    if live_trading:
+        try:
+            exchange = get_exchange()
+            symbol = os.getenv("TRADING_SYMBOL", "BTC/CAD")
+            base_symbol = symbol.split("/")[0]
+            balance = exchange.fetch_balance()
+            btc_held = float(balance.get(base_symbol, {}).get("total", 0))
+
+            if btc_held > 0.00001 and not position_manager.has_open_position(base_symbol):
+                trades = exchange.fetch_my_trades(symbol, limit=5)
+                last_buy = None
+                for t in reversed(trades):
+                    if t["side"] == "buy":
+                        last_buy = t
+                        break
+
+                if last_buy:
+                    entry_price = float(last_buy["price"])
+                    size = btc_held
+                    stop_loss_price = entry_price * (1 - day_trading_config.stop_loss_pct)
+                    take_profit_price = entry_price * (1 + day_trading_config.take_profit_pct)
+                    position_manager.open_position(
+                        symbol=base_symbol,
+                        side="long",
+                        entry_price=entry_price,
+                        size=size,
+                        stop_loss_price=stop_loss_price,
+                        take_profit_price=take_profit_price,
+                    )
+                    logger.info(
+                        f"Synced open position from exchange: LONG {size} {base_symbol} "
+                        f"@ ${entry_price:,.2f}"
+                    )
+                else:
+                    logger.warning(f"Found {btc_held} {base_symbol} on exchange but no buy trade to sync from")
+            elif btc_held <= 0.00001 and position_manager.has_open_position(base_symbol):
+                logger.warning(f"Stale local position for {base_symbol} — exchange balance is 0. Clearing.")
+                position_manager._positions.pop(base_symbol, None)
+                position_manager._auto_save()
+        except Exception as e:
+            logger.warning(f"Failed to sync with exchange: {e}")
+
     logger.info("Day trading components initialized successfully")
 
 
@@ -281,7 +325,9 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
                         exec_side,
                         trade_size,
                     )
-                    exec_price = order.get("average", order.get("price", price))
+                    exec_price = order.get("average") or order.get("price") or price
+                    if isinstance(exec_price, str):
+                        exec_price = float(exec_price)
                     logger.info(
                         f"  LIVE ORDER: {exec_side.upper()} {trade_size} {base_symbol} "
                         f"@ ${exec_price:,.2f} (order_id: {order.get('id', 'unknown')})"

@@ -16,7 +16,7 @@ serviceAccount:
 traders:
   - name: crewai-grok
     mode: crewai
-    symbol: BTC/CAD
+    symbol: BTC/USD
     interval: "300"
     llmProvider: grok
     sentimentModel: "ElKulako/cryptobert"
