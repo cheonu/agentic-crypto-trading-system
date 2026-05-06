@@ -249,6 +249,17 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
                 f"triggered at ${event.trigger_price:,.2f} "
                 f"(entry: ${event.entry_price:,.2f}, loss: {event.loss_pct:.2%})"
             )
+            # Place real sell order on exchange
+            live_trading = os.getenv("TRADING_LIVE", "false").lower() == "true"
+            if live_trading:
+                try:
+                    exchange = get_exchange()
+                    pos = position_manager.get_position(event.symbol)
+                    if pos:
+                        order = exchange.create_market_order(symbol, "sell", pos.size)
+                        logger.info(f"  LIVE SELL (stop-loss): sold {pos.size} {event.symbol}")
+                except Exception as e:
+                    logger.error(f"  LIVE SELL FAILED (stop-loss): {e}")
             position_manager.close_position(
                 event.symbol, event.trigger_price, exit_reason=event.exit_reason
             )
@@ -281,12 +292,22 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
         # All-in: use full portfolio value to calculate trade size
         price = market_data["price"]
         #trade_size = round(day_trading_config.portfolio_value / price, 6)
-        # Ensure minimum trade size for Binance (0.00001 BTC)
-        # New: risk-based position sizing
-        risk_amount = day_trading_config.portfolio_value * day_trading_config.risk_per_trade_pct
+        # Get actual exchange balance for trade sizing
+        live_trading = os.getenv("TRADING_LIVE", "false").lower() == "true"
+        if live_trading:
+            try:
+                exchange = get_exchange()
+                balance = exchange.fetch_balance()
+                quote_currency = symbol.split("/")[1]  # USD from BTC/USD
+                available_balance = float(balance.get(quote_currency, {}).get("free", 0))
+                # Leave 2% buffer for fees
+                risk_amount = available_balance * 0.98 * day_trading_config.risk_per_trade_pct
+            except Exception as e:
+                logger.warning(f"Failed to fetch balance, using config value: {e}")
+                risk_amount = day_trading_config.portfolio_value * day_trading_config.risk_per_trade_pct
+        else:
+            risk_amount = day_trading_config.portfolio_value * day_trading_config.risk_per_trade_pct
         trade_size = round(risk_amount / price, 6)
-        trade_size = max(trade_size, 0.00001)  # Binance minimum
-
         trade_size = max(trade_size, 0.00001)
 
         filtered_signal = fee_filter.filter_signal(
@@ -320,10 +341,16 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
                 # Place real order on exchange
                 try:
                     exchange = get_exchange()
+                    # For sells, use the actual position size
+                    order_size = trade_size
+                    if exec_side == "sell" and position_manager.has_open_position(base_symbol):
+                        pos = position_manager.get_position(base_symbol)
+                        if pos:
+                            order_size = pos.size
                     order = exchange.create_market_order(
                         symbol,
                         exec_side,
-                        trade_size,
+                        order_size,
                     )
                     exec_price = order.get("average") or order.get("price") or price
                     if isinstance(exec_price, str):
