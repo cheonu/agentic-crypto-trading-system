@@ -6,24 +6,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir poetry
+RUN pip install --no-cache-dir poetry poetry-plugin-export
 
 COPY pyproject.toml poetry.lock ./
 
-# Install CPU-only torch FIRST — this is the only torch we want
+# Install CPU-only torch FIRST so poetry doesn't pull the 2GB+ CUDA version
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-# Tell poetry to skip torch entirely — it's already installed via pip above
-# This prevents poetry from downloading the 2GB+ CUDA version
+# Export poetry deps to requirements.txt, strip torch (already installed), then pip install
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root \
-    --without finetune \
-    && pip install --no-cache-dir --force-reinstall --no-deps torch --index-url https://download.pytorch.org/whl/cpu \
-    && pip uninstall -y nvidia-cublas-cu12 nvidia-cuda-cupti-cu12 nvidia-cuda-nvrtc-cu12 \
-       nvidia-cuda-runtime-cu12 nvidia-cudnn-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 \
-       nvidia-cusolver-cu12 nvidia-cusparse-cu12 nvidia-cusparselt-cu12 nvidia-nccl-cu12 \
-       nvidia-nvjitlink-cu12 nvidia-nvtx-cu12 triton 2>/dev/null || true \
-    && rm -rf /usr/local/lib/python3.13/site-packages/nvidia /root/.cache /tmp/*
+    && poetry export --without finetune --without dev -o requirements.txt --without-hashes \
+    && sed -i '/^torch[>=<! ]/d' requirements.txt \
+    && sed -i '/^nvidia-/d' requirements.txt \
+    && sed -i '/^triton/d' requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt \
+    && rm -rf /root/.cache /tmp/*
+
+# Verify torch is working
+RUN python -c "import torch; print(f'PyTorch {torch.__version__} OK')"
 
 # Pre-download HF model
 ENV HF_HOME=/app/.cache/huggingface

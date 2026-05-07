@@ -465,7 +465,7 @@ async def run_cycle(symbol: str, cycle_num: int) -> dict:
 
         result = {
             "cycle": cycle_num,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "symbol": symbol,
             "price": market_data["price"],
             "regime": regime["regime"],
