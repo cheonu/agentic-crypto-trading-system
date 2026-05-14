@@ -1,0 +1,63 @@
+{{- range .Values.traders }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: restart-trader-{{ .name }}
+  namespace: crypto-trader
+  labels:
+    app: crypto-trader
+    component: restart-cronjob
+    trader: {{ .name }}
+spec:
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: restart-cronjob-sa
+          containers:
+            - name: kubectl
+              image: bitnami/kubectl:latest
+              command:
+                - kubectl
+                - rollout
+                - restart
+                - deployment/trader-{{ .name }}
+                - -n
+                - crypto-trader
+          restartPolicy: OnFailure
+{{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: restart-cronjob-sa
+  namespace: crypto-trader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: restart-deployment
+  namespace: crypto-trader
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restart-deployment-binding
+  namespace: crypto-trader
+subjects:
+  - kind: ServiceAccount
+    name: restart-cronjob-sa
+    namespace: crypto-trader
+roleRef:
+  kind: Role
+  name: restart-deployment
+  apiGroup: rbac.authorization.k8s.io
